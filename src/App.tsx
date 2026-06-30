@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { audioEngine } from './utils/audio';
-
-// Monochrome & Line Art Color Scheme
-const COLOR_PAPER_BG = '#fcfbfa';   // Clean off-white paper canvas
 
 interface FloatingDot {
   num: number;
@@ -37,35 +33,26 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   
-  // Single premium sound channel state
-  const [isSoundActive, setIsSoundActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync Master audio volume
+  // Automatically handle active background ambient rain + hum mix when running
   useEffect(() => {
-    audioEngine.setMasterMute(isMuted);
-  }, [isMuted]);
-
-  // Handle active single background ambient rain + theta hum mix
-  useEffect(() => {
-    // Completely silence active channels first to reset
+    // Silence active channels first to reset
     audioEngine.toggleSound('hum', false);
     audioEngine.toggleSound('rain', false);
     audioEngine.toggleSound('wind', false);
     audioEngine.toggleSound('waves', false);
 
-    if (isMuted || !isSoundActive) return;
+    if (!isRunning || isCompleted) return;
 
-    // Single mixed channel combining relaxing rain with theta focus hum & natural wind
+    // Autoplay our beautiful hifi ambient rain and wind mix when the timer runs
     audioEngine.toggleSound('rain', true);
-    audioEngine.setVolume('rain', 0.45);
+    audioEngine.setVolume('rain', 0.5);
     audioEngine.toggleSound('hum', true);
     audioEngine.setVolume('hum', 0.35);
     audioEngine.toggleSound('wind', true);
     audioEngine.setVolume('wind', 0.25);
-  }, [isSoundActive, isMuted]);
+  }, [isRunning, isCompleted]);
 
   // Cleanup sound generators
   useEffect(() => {
@@ -98,27 +85,27 @@ export default function App() {
     };
   }, [isRunning]);
 
-  const handleToggleTimer = () => {
-    if (isCompleted) {
-      setIsCompleted(false);
-      setTimeLeft(initialDuration);
-    }
-    audioEngine.setMasterMute(isMuted);
-    setIsRunning(!isRunning);
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    setIsCompleted(false);
-    setTimeLeft(initialDuration);
-  };
-
+  // Click handler on clock nodes starts/resumes/toggles the timer
   const handleSelectPreset = (minutes: number) => {
-    setIsRunning(false);
-    setIsCompleted(false);
     const secs = minutes * 60;
-    setInitialDuration(secs);
-    setTimeLeft(secs);
+    const isSameMinute = Math.round(initialDuration / 60) === minutes;
+
+    if (isSameMinute) {
+      // Toggle play/pause if we click the already selected minute node
+      if (isCompleted) {
+        setIsCompleted(false);
+        setTimeLeft(secs);
+        setIsRunning(true);
+      } else {
+        setIsRunning(!isRunning);
+      }
+    } else {
+      // If clicking a new number, reset to that time and start immediately
+      setIsCompleted(false);
+      setInitialDuration(secs);
+      setTimeLeft(secs);
+      setIsRunning(true);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -188,7 +175,7 @@ export default function App() {
                   ease: 'easeInOut',
                 }}
                 whileHover={{ scale: 1.2, zIndex: 30 }}
-                title={`Set timer to ${dot.num} Min`}
+                title={`Click to start/pause ${dot.num} Min timer`}
               >
                 {/* The beautifully minimalist outline node container */}
                 <div 
@@ -245,18 +232,15 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quiet bottom guide line */}
-          <div className="absolute bottom-6 font-mono text-[9px] uppercase tracking-[0.25em] text-[#111111]/40 select-none pointer-events-none">
-            Stare • Focus • Daydream
-          </div>
+
 
         </div>
 
-        {/* RIGHT COMPONENT: Elegant line-drawn tactile control panel (Dieter Rams schematic feel) */}
-        <div className="w-full max-w-sm flex flex-col gap-5">
+        {/* RIGHT COMPONENT: Elegant line-drawn tactile display */}
+        <div style={{ height: '408.8125px', marginBottom: '-16px' }} className="w-full max-w-sm flex flex-col gap-5">
           
           {/* T3-Style body with flat line boundaries */}
-          <div className="bg-[#fcfbfa] border border-[#111111] rounded-[24px] p-6 md:p-8 flex flex-col gap-6 w-full shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative">
+          <div style={{ height: '348.8125px' }} className="bg-[#fcfbfa] border border-[#111111] rounded-[24px] p-6 md:p-8 flex flex-col gap-6 w-full shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative">
             
             {/* Fine Speaker Vent represented as pure minimal line-art circles */}
             <div className="flex flex-col gap-2">
@@ -313,73 +297,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Minimal Control Keys with crisp border lines */}
-            <div className="flex items-center gap-4">
-              
-              {/* Core trigger toggle (Solid black circle button) */}
-              <button
-                id="btn-main-trigger"
-                onClick={handleToggleTimer}
-                className="w-14 h-14 rounded-full bg-[#111111] hover:bg-[#2a2a2a] text-[#fcfbfa] active:scale-95 transition-all flex items-center justify-center shrink-0 cursor-pointer shadow-md"
-              >
-                {isRunning ? (
-                  <Pause className="w-4 h-4 fill-current text-[#fcfbfa]" />
-                ) : (
-                  <Play className="w-4 h-4 fill-current text-[#fcfbfa] translate-x-[1px]" />
-                )}
-              </button>
-
-              {/* Action layout */}
-              <div className="flex-1 flex gap-2">
-                <button
-                  id="btn-clock-reset"
-                  onClick={handleReset}
-                  className="flex-1 flex items-center justify-center py-3 rounded-xl border border-[#111111] bg-[#fcfbfa] hover:bg-[#111111] hover:text-[#fcfbfa] text-[#111111] font-mono text-xs uppercase tracking-wider transition-all"
-                >
-                  Reset
-                </button>
-                
-                <button
-                  id="btn-toggle-mute"
-                  onClick={() => setIsMuted(!isMuted)}
-                  className={`px-3.5 py-3 rounded-xl border transition-all ${
-                    isMuted
-                      ? 'bg-[#111111] border-[#111111] text-[#fcfbfa]'
-                      : 'border-[#111111] bg-[#fcfbfa] text-[#111111] hover:bg-[#111111] hover:text-[#fcfbfa]'
-                  }`}
-                  title={isMuted ? 'Unmute' : 'Mute'}
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Minimal Single Channel Ambient (变成随机hifi、氛围感、雨声音乐入口) */}
-            <div className="flex flex-col gap-2 w-full pt-1">
-              <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#111111]/50 block">
-                Hi-Fi Ambient Audio
-              </span>
-              
-              <button
-                id="btn-toggle-hum"
-                onClick={() => setIsSoundActive(!isSoundActive)}
-                style={{ fontFamily: 'system-ui' }}
-                className={`w-full py-3 rounded-xl border text-xs transition-all uppercase tracking-wider cursor-pointer ${
-                  isSoundActive
-                    ? 'bg-[#111111] border-[#111111] text-[#fcfbfa] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.12)] animate-pulse'
-                    : 'bg-[#fcfbfa] border-[#111111] text-[#111111] hover:bg-[#111111] hover:text-[#fcfbfa]'
-                }`}
-              >
-                {isSoundActive ? 'Mute Ambient Rain' : 'Play Ambient Rain'}
-              </button>
-            </div>
-
           </div>
 
           {/* Quick instructions indicator */}
           <div className="text-center px-4">
             <p style={{ fontFamily: 'system-ui' }} className="text-[10px] text-[#111111]/40 leading-relaxed uppercase tracking-widest">
-              Tap any outline node to set timer interval.
+              Tap any scattered number on the left to start/pause timer.
             </p>
           </div>
 
