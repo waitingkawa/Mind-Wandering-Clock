@@ -2,7 +2,7 @@
   "name": "mind-wandering-clock",
   "productName": "Mind-Wandering Clock",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "A gentle break timer for pausing, wandering, and resting your mind.",
   "author": "waitingkawa",
   "main": "electron/main.mjs",

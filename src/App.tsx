@@ -1,44 +1,69 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { audioEngine } from './utils/audio';
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
+import {useEffect, useRef, useState} from 'react';
+import {audioEngine} from './utils/audio';
 
-interface FloatingDot {
-  num: number;
-  radiusOffset: number; // distance from center (pixels)
-  angleOffset: number;  // slight angular offset (degrees)
+type Theme = 'light' | 'dark';
+
+interface ClockNode {
+  minute: number;
   swayDuration: number;
   swayX: number;
   swayY: number;
 }
 
-// Organic hour positions corresponding to the scattered look in the user's reference image
-const scatteredDots: FloatingDot[] = [
-  { num: 1, radiusOffset: 85, angleOffset: 5, swayDuration: 7, swayX: 6, swayY: -4 },
-  { num: 2, radiusOffset: 125, angleOffset: -8, swayDuration: 8, swayX: -5, swayY: 7 },
-  { num: 3, radiusOffset: 120, angleOffset: 2, swayDuration: 6, swayX: 8, swayY: 5 },
-  { num: 4, radiusOffset: 75, angleOffset: 12, swayDuration: 9, swayX: -4, swayY: -6 },
-  { num: 5, radiusOffset: 110, angleOffset: -5, swayDuration: 11, swayX: 7, swayY: -7 },
-  { num: 6, radiusOffset: 135, angleOffset: 3, swayDuration: 10, swayX: -8, swayY: 6 },
-  { num: 7, radiusOffset: 75, angleOffset: -10, swayDuration: 12, swayX: 5, swayY: 8 },
-  { num: 8, radiusOffset: 125, angleOffset: 6, swayDuration: 7.5, swayX: -6, swayY: -5 },
-  { num: 9, radiusOffset: 80, angleOffset: -12, swayDuration: 9.5, swayX: 7, swayY: 6 },
-  { num: 10, radiusOffset: 115, angleOffset: 8, swayDuration: 8.5, swayX: -7, swayY: -8 },
-  { num: 11, radiusOffset: 105, angleOffset: -4, swayDuration: 10.5, swayX: 5, swayY: -5 },
-  { num: 12, radiusOffset: 125, angleOffset: 2, swayDuration: 6.5, swayX: -4, swayY: 8 },
+const clockNodes: ClockNode[] = [
+  {minute: 1, swayDuration: 7.2, swayX: 3, swayY: -4},
+  {minute: 2, swayDuration: 8.4, swayX: -4, swayY: 3},
+  {minute: 3, swayDuration: 6.8, swayX: 4, swayY: 2},
+  {minute: 4, swayDuration: 9.1, swayX: -3, swayY: -4},
+  {minute: 5, swayDuration: 10.4, swayX: 3, swayY: -3},
+  {minute: 6, swayDuration: 8.7, swayX: -4, swayY: 3},
+  {minute: 7, swayDuration: 9.8, swayX: 3, swayY: 4},
+  {minute: 8, swayDuration: 7.6, swayX: -3, swayY: -3},
+  {minute: 9, swayDuration: 8.9, swayX: 4, swayY: 2},
+  {minute: 10, swayDuration: 9.5, swayX: -4, swayY: -3},
+  {minute: 11, swayDuration: 8.2, swayX: 3, swayY: -4},
+  {minute: 12, swayDuration: 7.1, swayX: -3, swayY: 3},
 ];
 
+const DOT_COUNT = 60;
+const DOT_COLUMNS = 10;
+
+function getInitialTheme(): Theme {
+  const savedTheme = window.localStorage.getItem('mind-wandering-theme');
+  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function formatDuration(seconds: number) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return [hours, minutes, secs]
+    .map((unit) => unit.toString().padStart(2, '0'))
+    .join(':');
+}
+
 export default function App() {
-  const [initialDuration, setInitialDuration] = useState(300); // Default 5 minutes (300 seconds)
+  const [initialDuration, setInitialDuration] = useState(300);
   const [timeLeft, setTimeLeft] = useState(300);
   const [isRunning, setIsRunning] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const endsAtRef = useRef<number | null>(null);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
-  // Automatically handle active background ambient rain + hum mix when running
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endsAtRef = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
+
   useEffect(() => {
-    // Silence active channels first to reset
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('mind-wandering-theme', theme);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#101112' : '#e6e0d7');
+  }, [theme]);
+
+  useEffect(() => {
     audioEngine.toggleSound('hum', false);
     audioEngine.toggleSound('rain', false);
     audioEngine.toggleSound('wind', false);
@@ -46,7 +71,6 @@ export default function App() {
 
     if (!isRunning || isCompleted) return;
 
-    // Autoplay our beautiful hifi ambient rain and wind mix when the timer runs
     audioEngine.toggleSound('rain', true);
     audioEngine.setVolume('rain', 0.5);
     audioEngine.toggleSound('hum', true);
@@ -55,14 +79,12 @@ export default function App() {
     audioEngine.setVolume('wind', 0.25);
   }, [isRunning, isCompleted]);
 
-  // Cleanup sound generators
   useEffect(() => {
     return () => {
       audioEngine.stopAll();
     };
   }, []);
 
-  // Timer Countdown Logic
   useEffect(() => {
     if (isRunning) {
       if (endsAtRef.current === null) {
@@ -81,15 +103,15 @@ export default function App() {
           endsAtRef.current = null;
           setIsRunning(false);
           setIsCompleted(true);
-          audioEngine.playChime(); // Soft music-box completion melody
+          audioEngine.playChime();
           if (timerRef.current) clearInterval(timerRef.current);
         }
       };
 
       updateTimer();
       timerRef.current = setInterval(updateTimer, 250);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
 
     return () => {
@@ -97,243 +119,233 @@ export default function App() {
     };
   }, [isRunning]);
 
-  // Click handler on clock nodes starts/resumes/toggles the timer
   const handleSelectPreset = (minutes: number) => {
-    // iPadOS requires AudioContext to resume synchronously from a touch gesture.
     audioEngine.unlock();
 
-    const secs = minutes * 60;
-    const isSameMinute = Math.round(initialDuration / 60) === minutes;
+    const seconds = minutes * 60;
+    const selectedMinute = Math.round(initialDuration / 60);
+    const isSameMinute = selectedMinute === minutes;
 
     if (isSameMinute) {
-      // Toggle play/pause if we click the already selected minute node
       if (isCompleted) {
         setIsCompleted(false);
-        setTimeLeft(secs);
-        endsAtRef.current = Date.now() + secs * 1000;
+        setTimeLeft(seconds);
+        endsAtRef.current = Date.now() + seconds * 1000;
         setIsRunning(true);
-      } else {
-        endsAtRef.current = isRunning ? null : Date.now() + timeLeft * 1000;
-        setIsRunning(!isRunning);
+        return;
       }
-    } else {
-      // If clicking a new number, reset to that time and start immediately
-      setIsCompleted(false);
-      setInitialDuration(secs);
-      setTimeLeft(secs);
-      endsAtRef.current = Date.now() + secs * 1000;
-      setIsRunning(true);
+
+      endsAtRef.current = isRunning ? null : Date.now() + timeLeft * 1000;
+      setIsRunning(!isRunning);
+      return;
     }
+
+    setIsCompleted(false);
+    setInitialDuration(seconds);
+    setTimeLeft(seconds);
+    endsAtRef.current = Date.now() + seconds * 1000;
+    setIsRunning(true);
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const toggleTimer = () => {
+    audioEngine.unlock();
+
+    if (isCompleted) {
+      setIsCompleted(false);
+      setTimeLeft(initialDuration);
+      endsAtRef.current = Date.now() + initialDuration * 1000;
+      setIsRunning(true);
+      return;
+    }
+
+    endsAtRef.current = isRunning ? null : Date.now() + timeLeft * 1000;
+    setIsRunning(!isRunning);
   };
 
-  // Convert hours/minutes to angles for mechanical clock hands
-  const currentSeconds = timeLeft % 60;
-
-  // Second sweep angle: smooth 360-degree rotation
-  const secondHandRotation = (currentSeconds * 6) + 180;
-  // Minute hand angle representing timer countdown remaining progress
-  const minuteHandRotation = ((timeLeft / initialDuration) * 360) + 180;
-
-  // Selected equivalent minute representation
   const selectedMinute = Math.round(initialDuration / 60);
+  const elapsedSeconds = initialDuration - timeLeft;
+  const elapsedRatio = Math.min(1, Math.max(0, elapsedSeconds / initialDuration));
+  const filledDots = isCompleted ? DOT_COUNT : Math.ceil(elapsedRatio * DOT_COUNT);
+  const minuteHandRotation = (timeLeft / initialDuration) * 360 + 180;
+  const secondHandRotation = (timeLeft % 60) * 6 + 180;
 
   return (
-    <div className="desktop-drag-surface min-h-screen bg-[#fcfbfa] text-[#111111] flex flex-col items-center justify-start lg:justify-center font-sans relative select-none px-4 py-14 md:px-8 lg:py-8">
-      <div
-        className="desktop-drag-handle fixed top-0 left-20 right-4 h-10 z-50 flex items-start justify-center pt-3"
-        aria-hidden="true"
-      >
-        <div className="w-10 h-1 rounded-full bg-[#111111]/15" />
+    <div className="desktop-drag-surface app-shell">
+      <div className="desktop-drag-handle" aria-hidden="true">
+        <span />
       </div>
-      
-      {/* Aesthetic Background Grid lines to resemble an Architect's Sketchbook or Drafting Paper */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#e1dfda_1px,transparent_1px),linear-gradient(to_bottom,#e1dfda_1px,transparent_1px)] bg-[size:40px_40px] opacity-[0.25] pointer-events-none" />
 
-      {/* Main Daydreaming Stage & Layout */}
-      <main className="w-full max-w-5xl flex flex-col lg:flex-row items-center justify-center gap-6 md:gap-10 lg:gap-20 z-10">
-        
-        {/* LEFT COMPONENT: The Airy, Free Floating Organically Scattered Clock Face (Pure Line Art) */}
-        <div style={{ height: '500px' }} className="relative flex items-center justify-center bg-transparent shrink-0 w-full max-w-[420px]">
-          
-          {/* Subtle Outer Guideline Circles (Line Art Details) */}
-          <div className="absolute w-[300px] h-[300px] md:w-[360px] md:h-[360px] rounded-full border border-dashed border-[#111111]/10 pointer-events-none" />
-          <div className="absolute w-[220px] h-[220px] md:w-[280px] md:h-[280px] rounded-full border border-[#111111]/15 pointer-events-none" />
-          <div className="absolute w-[140px] h-[140px] md:w-[180px] md:h-[180px] rounded-full border border-dashed border-[#111111]/5 pointer-events-none" />
+      <header className="app-header">
+        <div className="brand-lockup">
+          <span className="eyebrow">Mind-Wandering / 001</span>
+          <h1>
+            Follow
+            <span>The Pause</span>
+          </h1>
+        </div>
 
-          {/* Render scattered outline hour nodes with gentle floating/swaying animations */}
-          {scatteredDots.map((dot) => {
-            // Calculate absolute polar coordinate positions
-            const baseAngle = (dot.num * 30) - 90; // 30 deg per hour, offset for 12 at top
-            const finalAngle = (baseAngle + dot.angleOffset) * (Math.PI / 180);
-            
-            // Adjust radius scale slightly for responsive layouts
-            const baseRadius = dot.radiusOffset;
-            const x = Math.cos(finalAngle) * baseRadius;
-            const y = Math.sin(finalAngle) * baseRadius;
+        <button
+          className="desktop-no-drag theme-switch"
+          type="button"
+          onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
+          aria-label={`Switch to ${theme === 'light' ? 'night' : 'day'} mode`}
+          aria-pressed={theme === 'dark'}
+        >
+          <span>{theme === 'light' ? 'Day' : 'Night'}</span>
+          <span className="switch-track" aria-hidden="true">
+            <span className="switch-thumb" />
+          </span>
+        </button>
+      </header>
 
-            const isSelected = selectedMinute === dot.num;
+      <main className="clock-layout">
+        <section className="clock-stage" aria-label="Choose a timer duration">
+          <div className="dial-guide dial-guide-outer" aria-hidden="true" />
+          <div className="dial-guide dial-guide-inner" aria-hidden="true" />
+          <span className="dial-label dial-label-top" aria-hidden="true">12</span>
+          <span className="dial-label dial-label-right" aria-hidden="true">03</span>
+          <span className="dial-label dial-label-bottom" aria-hidden="true">06</span>
+          <span className="dial-label dial-label-left" aria-hidden="true">09</span>
+
+          {clockNodes.map((node) => {
+            const angle = (node.minute * 30 - 90) * (Math.PI / 180);
+            const radius = 142;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            const selected = selectedMinute === node.minute;
 
             return (
-              <motion.div
-                key={dot.num}
-                id={`floating-dot-${dot.num}`}
-                onClick={() => handleSelectPreset(dot.num)}
-                className="desktop-no-drag absolute cursor-pointer flex items-center justify-center z-10"
+              <motion.button
+                key={node.minute}
+                className={`desktop-no-drag clock-node ${selected ? 'is-selected' : ''}`}
+                type="button"
+                onClick={() => handleSelectPreset(node.minute)}
                 style={{
-                  left: `calc(50% + ${x}px - 14px)`,
-                  top: `calc(50% + ${y}px - 14px)`,
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
                 }}
-                animate={{
-                  x: [0, dot.swayX, 0],
-                  y: [0, dot.swayY, 0],
+                animate={reduceMotion ? undefined : {
+                  x: [0, node.swayX, 0],
+                  y: [0, node.swayY, 0],
                 }}
-                transition={{
-                  duration: dot.swayDuration,
+                transition={reduceMotion ? undefined : {
+                  duration: node.swayDuration,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
-                whileHover={{ scale: 1.2, zIndex: 30 }}
-                title={`Click to start/pause ${dot.num} Min timer`}
+                whileHover={reduceMotion ? undefined : {scale: 1.08}}
+                aria-label={`${node.minute} minute timer${selected ? ', selected' : ''}`}
+                aria-pressed={selected}
               >
-                {/* The beautifully minimalist outline node container */}
-                <div 
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-mono tracking-tighter relative transition-all duration-300 ${
-                    isSelected 
-                      ? 'bg-[#111111] text-[#fcfbfa] border border-[#111111] shadow-[0_4px_12px_rgba(0,0,0,0.15)] font-bold' 
-                      : 'bg-[#fcfbfa] text-[#111111] border border-[#111111] hover:bg-[#111111] hover:text-[#fcfbfa]'
-                  }`}
-                >
-                  {/* Decorative tiny inner dot (from Image 1 style) */}
-                  <span className={`absolute left-[5px] top-[11px] w-[3px] h-[3px] rounded-full transition-colors ${
-                    isSelected ? 'bg-[#fcfbfa]/80' : 'bg-[#111111]/40'
-                  }`} />
-                  <span className="translate-x-[3px]">{dot.num}</span>
-                </div>
-
-                {/* Concentric helper technical line circle when active */}
-                {isSelected && (
-                  <motion.div 
-                    layoutId="activeCircleOutline"
-                    className="absolute -inset-1.5 rounded-full border border-dashed border-[#111111]/40 pointer-events-none"
-                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                  />
-                )}
-              </motion.div>
+                <span className="node-speck" aria-hidden="true" />
+                <span>{node.minute}</span>
+              </motion.button>
             );
           })}
 
-          {/* Minimal Clock Hands (Pure line-art aesthetics) */}
-          <div className="relative w-12 h-12 flex items-center justify-center z-20">
-            
-            {/* Center metal pin cap - minimalist black concentric rings */}
-            <div className="w-4 h-4 rounded-full bg-[#fcfbfa] border-2 border-[#111111] flex items-center justify-center shadow-sm z-30">
-              <div className="w-1 h-1 rounded-full bg-[#111111]" />
+          <div className="clock-hands" aria-hidden="true">
+            <div className="center-pin">
+              <span />
             </div>
-
-            {/* Minute Hand (Continuous line representing remaining progress) */}
-            <div 
-              className="absolute inset-0 pointer-events-none transition-transform duration-1000 ease-linear"
-              style={{ transform: `rotate(${minuteHandRotation}deg)`, height: '170px', top: '-61px' }}
+            <div
+              className="hand-layer hand-layer-minute"
+              style={{transform: `rotate(${minuteHandRotation}deg)`}}
             >
-              <div className="w-[1.5px] h-16 bg-[#111111] mx-auto" />
+              <span className="minute-hand" />
             </div>
-
-            {/* Sweep second hand (Thin delicate vector line with a circular terminal ring) */}
-            <div 
-              className="absolute inset-0 pointer-events-none transition-transform duration-1000 ease-linear"
-              style={{ transform: `rotate(${secondHandRotation}deg)`, height: '230px', top: '-91px' }}
+            <div
+              className="hand-layer hand-layer-second"
+              style={{transform: `rotate(${secondHandRotation}deg)`}}
             >
-              <div className="w-[1px] h-24 bg-[#111111]/70 mx-auto relative">
-                {/* Tiny outline loop ring on the second hand */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border border-[#111111] bg-[#fcfbfa]" />
-              </div>
-            </div>
-          </div>
-
-
-
-        </div>
-
-        {/* RIGHT COMPONENT: Elegant line-drawn tactile display */}
-        <div style={{ height: '408.8125px', marginBottom: '-16px' }} className="w-full max-w-sm flex flex-col gap-5">
-          
-          {/* T3-Style body with flat line boundaries */}
-          <div style={{ height: '348.8125px' }} className="bg-[#fcfbfa] border border-[#111111] rounded-[24px] p-6 md:p-8 flex flex-col gap-6 w-full shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative">
-            
-            {/* Fine Speaker Vent represented as pure minimal line-art circles */}
-            <div className="flex flex-col gap-2">
-              <span style={{ fontFamily: 'system-ui' }} className="text-[9px] uppercase tracking-[0.2em] text-[#111111]/50 block">
-                Chamber Speaker Vent
+              <span className="second-hand">
+                <span />
               </span>
-              <div className="grid grid-cols-10 gap-2 p-4 bg-transparent border border-[#111111]/15 rounded-xl">
-                {Array.from({ length: 40 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="aspect-square rounded-full border border-[#111111]/25 transition-colors duration-500" 
-                    style={{
-                      backgroundColor: isRunning && (i % 4 === 0) ? '#111111' : 'transparent'
-                    }}
-                  />
-                ))}
-              </div>
             </div>
+          </div>
 
-            {/* Line-drawn high-contrast time box */}
-            <div className="border border-[#111111] rounded-2xl p-5 text-center bg-transparent relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                {isCompleted ? (
-                  <motion.div
-                    key="finished"
-                    initial={{ opacity: 0, y: 3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-[#111111] font-mono font-bold text-base tracking-[0.2em] uppercase py-2"
-                  >
-                    ✦ COMPLETED ✦
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="time"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-[#111111] font-mono text-4xl font-light tracking-widest block"
-                  >
-                    {formatTime(timeLeft)}
-                  </motion.div>
-                )}
+          <div className="clock-caption">
+            <span>Selected interval</span>
+            <strong>{selectedMinute.toString().padStart(2, '0')} MIN</strong>
+          </div>
+        </section>
+
+        <section className="timer-console" aria-label="Timer progress">
+          <div className="timer-readout">
+            <div>
+              <span>Elapsed</span>
+              <time dateTime={`PT${elapsedSeconds}S`}>{formatDuration(elapsedSeconds)}</time>
+            </div>
+            <div className="remaining-readout">
+              <span>Remaining</span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.time
+                  key={isCompleted ? 'completed' : 'running'}
+                  dateTime={`PT${timeLeft}S`}
+                  initial={reduceMotion ? false : {opacity: 0, y: 5}}
+                  animate={{opacity: 1, y: 0}}
+                  exit={reduceMotion ? undefined : {opacity: 0, y: -5}}
+                >
+                  {isCompleted ? 'COMPLETE' : formatDuration(timeLeft)}
+                </motion.time>
               </AnimatePresence>
-              
-              {/* Minimal Line indicator instead of green LED */}
-              <div className="absolute top-2 right-3 flex items-center gap-1.5">
-                <span className="text-[8px] font-mono text-[#111111]/40 uppercase tracking-wider">
-                  {isRunning ? 'RUN' : 'STOP'}
-                </span>
-                <div 
-                  className={`w-1.5 h-1.5 rounded-full border ${
-                    isRunning ? 'bg-[#111111] border-[#111111]' : 'bg-transparent border-[#111111]'
-                  }`}
+            </div>
+          </div>
+
+          <div
+            className="dot-matrix"
+            role="progressbar"
+            aria-label="Elapsed timer progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(elapsedRatio * 100)}
+          >
+            {Array.from({length: DOT_COUNT}).map((_, index) => {
+              const row = Math.floor(index / DOT_COLUMNS);
+              const column = index % DOT_COLUMNS;
+              const pathPosition = row % 2 === 0
+                ? row * DOT_COLUMNS + column
+                : row * DOT_COLUMNS + (DOT_COLUMNS - 1 - column);
+              const filled = pathPosition < filledDots;
+
+              return (
+                <span
+                  key={index}
+                  className={`progress-dot ${filled ? 'is-filled' : ''}`}
+                  aria-hidden="true"
                 />
-              </div>
+              );
+            })}
+          </div>
+
+          <div className="console-footer">
+            <div className="status-copy" aria-live="polite">
+              <span className={`status-pip ${isRunning ? 'is-live' : ''}`} />
+              <span>
+                {isCompleted
+                  ? 'A small pause, completed.'
+                  : isRunning
+                    ? 'Follow the line. Let the mind wander.'
+                    : timeLeft < initialDuration
+                      ? 'Pause held. Begin again when ready.'
+                      : 'Choose a circle, then take your pause.'}
+              </span>
             </div>
 
+            <button
+              type="button"
+              className="desktop-no-drag timer-toggle"
+              onClick={toggleTimer}
+            >
+              {isCompleted ? 'Again' : isRunning ? 'Pause' : 'Begin'}
+            </button>
           </div>
-
-          {/* Quick instructions indicator */}
-          <div className="text-center px-4">
-            <p style={{ fontFamily: 'system-ui' }} className="text-[10px] text-[#111111]/40 leading-relaxed uppercase tracking-widest">
-              Tap any scattered number on the left to start/pause timer.
-            </p>
-          </div>
-
-        </div>
-
+        </section>
       </main>
 
+      <footer className="app-footer">
+        <span>Nature sounds / Rain + wind + low hum</span>
+        <span>Tap any numbered circle to begin</span>
+      </footer>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mind-wandering-clock-v1';
+const CACHE_NAME = 'mind-wandering-clock-v2';
 const APP_SHELL = [
   './',
   './index.html',
