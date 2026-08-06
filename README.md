@@ -58,6 +58,10 @@ npm run desktop:dist
 
 Build outputs are written to `release/`.
 
+## Working with coding agents
+
+[`AGENT_PROMPT.md`](AGENT_PROMPT.md) contains a copy-ready maintenance prompt for Codex, Claude Code, Cursor, and similar tools. Add the task and acceptance criteria at the bottom; the rest keeps changes aligned with the clock's design, behavior, and release process.
+
 ## Publishing a release
 
 The release workflow builds both Apple Silicon and Intel installers. Keep `package.json` and the Git tag on the same version:
