@@ -5,6 +5,22 @@
   "version": "1.1.0",
   "description": "A gentle break timer for pausing, wandering, and resting your mind.",
   "author": "waitingkawa",
+  "license": "MIT",
+  "homepage": "https://waitingkawa.github.io/Mind-Wandering-Clock/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitingkawa/Mind-Wandering-Clock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/waitingkawa/Mind-Wandering-Clock/issues"
+  },
+  "keywords": [
+    "timer",
+    "mindfulness",
+    "focus",
+    "electron",
+    "pwa"
+  ],
   "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
@@ -14,8 +30,10 @@
     "desktop:start": "npm run build && electron .",
     "desktop:pack": "npm run build && electron-builder --mac --dir",
     "desktop:dist": "npm run build && electron-builder --mac",
+    "desktop:dist:all": "npm run build && electron-builder --mac dmg zip --x64 --arm64",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run build"
   },
   "dependencies": {},
   "devDependencies": {
@@ -35,7 +53,6 @@
     "appId": "com.waitingkawa.mindwanderingclock",
     "productName": "Mind-Wandering Clock",
     "asar": true,
-    "electronDist": "node_modules/electron/dist",
     "npmRebuild": false,
     "files": [
       "dist/**/*",

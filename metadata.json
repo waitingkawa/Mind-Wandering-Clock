@@ -1,6 +1,0 @@
-{
-  "name": "Relaxation Space",
-  "description": "A simple, serene application for breathing exercises, soundscapes, and mindfulness.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
