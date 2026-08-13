@@ -9,8 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    name: Build ${{ matrix.arch }}
     runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            builder_flag: --arm64
+          - arch: x64
+            builder_flag: --x64
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
@@ -25,13 +34,32 @@ jobs:
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           test "v${PACKAGE_VERSION}" = "${GITHUB_REF_NAME}"
       - run: npm run check
-      - run: npm run desktop:dist:all
+      - name: Build installer
+        run: npx electron-builder --mac dmg zip ${{ matrix.builder_flag }} --publish never
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            release/*.dmg \
-            release/*.zip \
+            artifacts/*.dmg \
+            artifacts/*.zip \
+            --repo "${GITHUB_REPOSITORY}" \
             --generate-notes \
             --title "Mind-Wandering Clock ${GITHUB_REF_NAME}"
