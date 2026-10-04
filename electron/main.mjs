@@ -56,7 +56,7 @@ function createWindow() {
     height: 720,
     minWidth: 900,
     minHeight: 620,
-    backgroundColor: '#fcfbfa',
+    backgroundColor: '#fefefe',
     title: 'Mind-Wandering Clock',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 18, y: 18 },

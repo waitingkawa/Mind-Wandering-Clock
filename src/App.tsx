@@ -60,7 +60,7 @@ export default function App() {
     window.localStorage.setItem('mind-wandering-theme', theme);
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', theme === 'dark' ? '#101112' : '#e6e0d7');
+      ?.setAttribute('content', theme === 'dark' ? '#101112' : '#fefefe');
   }, [theme]);
 
   useEffect(() => {
