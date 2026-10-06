@@ -1,35 +1,47 @@
-# Mind-Wandering Clock
+<div align="center">
+  <img src="public/icons/icon-192.png" width="72" height="72" alt="Mind-Wandering Clock icon">
+  <h1>Mind-Wandering Clock</h1>
+  <p>A quiet timer for letting attention loosen.</p>
+  <p>
+    <a href="https://github.com/waitingkawa/Mind-Wandering-Clock/releases/latest"><strong>Download for macOS</strong></a>
+    &nbsp;&nbsp;·&nbsp;&nbsp;
+    <a href="https://waitingkawa.github.io/Mind-Wandering-Clock/"><strong>Open the web app</strong></a>
+  </p>
+  <sub>macOS · iPad and iPhone · Browser</sub>
+</div>
 
-![Mind-Wandering Clock](public/og.png)
+<br>
 
-A quiet timer for deliberate pauses. Choose a duration from the clock face, let the dot field mark the passing time, and listen to a soft rain-and-wind soundscape while your attention drifts.
+![Mind-Wandering Clock in Day mode](docs/app-day.png)
 
-The clock works as a macOS desktop app and as an installable web app. It runs locally and does not send timer or audio data anywhere.
+Pick a circle and step away for a minute or twelve. The clock counts down without demanding attention: a hand moves, sixty dots fill, and rain, wind, and a low hum sit quietly underneath. When the pause is over, a soft chime brings you back.
+
+No account. No tracking. Timer state and audio stay on your device.
+
+## What is inside
+
+- Twelve one-tap intervals arranged around a clock face
+- A 60-dot field that makes elapsed time visible at a glance
+- Day and Night modes with a remembered preference
+- Synthesized rain, wind, low hum, and a gentle completion chime
+- A draggable macOS window that can stay near your work
+- An installable PWA with offline support
 
 ## Download
 
-Download the latest macOS build from [GitHub Releases](https://github.com/waitingkawa/Mind-Wandering-Clock/releases/latest).
+The latest macOS build is on [GitHub Releases](https://github.com/waitingkawa/Mind-Wandering-Clock/releases/latest).
 
-- `arm64` is for Apple Silicon Macs (M1 and newer).
-- `x64` is for Intel Macs.
-- The DMG is the usual installer; the ZIP contains the app directly.
+- Apple Silicon Macs use the `arm64` build.
+- Intel Macs use the `x64` build.
+- The DMG is the standard installer. The ZIP contains the app directly.
 
-The downloadable builds are currently unsigned. If macOS blocks the first launch, Control-click the app, choose **Open**, then confirm once. Signed and notarized builds are planned.
+The current builds are unsigned. If macOS blocks the first launch, Control-click the app, choose **Open**, then confirm once.
 
-For iPad or iPhone, open the [web version](https://waitingkawa.github.io/Mind-Wandering-Clock/) in Safari and choose **Share → Add to Home Screen**.
+On iPad or iPhone, open the [web app](https://waitingkawa.github.io/Mind-Wandering-Clock/) in Safari, tap **Share**, then choose **Add to Home Screen**.
 
-## What it includes
+## Run it locally
 
-- Twelve quick timer durations arranged around a clock face
-- Light and night themes with a remembered preference
-- A 60-dot progress field
-- Synthesized rain, wind, and a gentle completion chime
-- A draggable, always-available macOS window
-- Offline-capable PWA support
-
-## Development
-
-Requires Node.js 22 or newer.
+Mind-Wandering Clock requires Node.js 22 or newer.
 
 ```bash
 git clone https://github.com/waitingkawa/Mind-Wandering-Clock.git
@@ -38,46 +50,46 @@ npm ci
 npm run dev
 ```
 
-Before committing:
-
-```bash
-npm run check
-```
-
-To open the desktop app locally:
+Open the desktop version:
 
 ```bash
 npm run desktop:start
 ```
 
-To create a DMG and ZIP for the current Mac architecture:
+Check the code and create a production build:
+
+```bash
+npm run check
+```
+
+Create a DMG and ZIP for the current Mac architecture:
 
 ```bash
 npm run desktop:dist
 ```
 
-Build outputs are written to `release/`.
+Build output is written to `release/`.
 
-## Working with coding agents
+## Work with a coding agent
 
-[`AGENT_PROMPT.md`](AGENT_PROMPT.md) contains a copy-ready maintenance prompt for Codex, Claude Code, Cursor, and similar tools. Add the task and acceptance criteria at the bottom; the rest keeps changes aligned with the clock's design, behavior, and release process.
+[`AGENT_PROMPT.md`](AGENT_PROMPT.md) is a copy-ready brief for Codex, Claude Code, Cursor, and similar tools. Add the task and acceptance criteria at the bottom. The rest explains the clock's design, behavior, and release process.
 
-## Publishing a release
+## Publish a release
 
-The release workflow builds both Apple Silicon and Intel installers. Keep `package.json` and the Git tag on the same version:
+Keep the version in `package.json` and the Git tag in sync:
 
 ```bash
 npm version patch
 git push origin main --follow-tags
 ```
 
-Pushing a tag such as `v1.1.1` creates a GitHub Release and attaches the four macOS downloads automatically. Use `minor` or `major` instead of `patch` when appropriate.
+A tag such as `v1.1.1` starts the release workflow and attaches Apple Silicon and Intel downloads. Use `minor` or `major` when the change calls for it.
 
-The web version is published from `main` through GitHub Pages. In the repository settings, select **Pages → Source → GitHub Actions** once.
+The web app is published from `main` with GitHub Pages. In the repository settings, choose **Pages → Source → GitHub Actions** once.
 
 ## Contributing
 
-Small, focused pull requests are welcome. For visual changes, include a screenshot; for behavior changes, describe what you tested. Please open an issue before beginning a large redesign so the direction can be discussed first.
+Small, focused pull requests are welcome. Include a screenshot with visual changes and a short test note with behavior changes. Please open an issue before starting a large redesign so the direction can be discussed first.
 
 ## License
 
